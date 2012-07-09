@@ -52,8 +52,8 @@ render(Data) ->
 to_href({MFA, Weight}) ->
 	FunctionName = function_name(MFA),
 	W = io_lib:format("~.1f",[Weight]),
-	lists:append([ "<a href=\"http://erlanger.org/man/", function_name_link(MFA), "\">"
-	             , FunctionName, "</a><small>", W ,"</small><br />"]).
+	lists:append([ "<a href=\"http://erlang.org/doc/man/", function_name_link(MFA), "\">"
+	             , FunctionName, "</a>&nbsp;<small>Weight: ", W ,"</small><br />"]).
 
 function_name({M, F, A}) ->
 	lists:flatten(lists:append([atom_to_list(M)
