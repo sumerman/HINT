@@ -60,4 +60,4 @@ function_name({M, F, A}) ->
 	             , ":", atom_to_list(F), "/", integer_to_list(A)])).
 function_name_link({M, F, A}) ->
 	lists:flatten(lists:append([atom_to_list(M)
-	             , ".html#", atom_to_list(F), "/", integer_to_list(A)])).
+	             , ".html#", atom_to_list(F), "-", integer_to_list(A)])).
