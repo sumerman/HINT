@@ -1,7 +1,9 @@
 apps/*/ebin/*
+sites/ebin/*
 deps/
 rel/*
 !rel/files
 !rel/reltool.config
 *.draft.*
 *.log
+*.app
