@@ -16,11 +16,13 @@ handle(Req, State) ->
 			R = case cowboy_http_req:body_qs(Req) of
 				   {[{<<"search">>, QB}], _} ->
 						Q = binary_to_list(QB),
-						{ok, Data} = hint_search:q(Q),
-						Data1 = lists:sublist(Data, 10),
-						render(Data1);
+						case hint_search:q(Q) of
+							{error, _Reason} -> render(error);
+							{ok, Data} -> 
+								Data1 = lists:sublist(Data, 10),
+								render(Data1)
+						end;
 					_ -> 
-					io:format("REQ ~p~n", [ooooo]),
 					render([])
 				end,
 			{ok, Rep} = cowboy_http_req:reply(
@@ -36,6 +38,11 @@ handle(Req, State) ->
 terminate(_R, _S) ->
 	ok.
 
+render(error) ->
+    {ok, Rendered} = hint_search_view:render([
+                {data, ["Error occured. Try rephrasing your search<br />"]}
+        ]), 
+	Rendered;
 render(Data) ->
 	D = [to_href(M) || M <- Data],
 	erlydtl:compile(
