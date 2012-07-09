@@ -14,9 +14,9 @@
 					<label for="search">{% t text="Type your types" %}</label> 
 					<input type="text" name="q" id="search" class="span10" placeholder="proplists:?(any(), list()) -> any()" />
 				</form>
-			<div class="well" id="result">
+			<div class="well" id="resultpane">
 				<h2>{% t title="Your results will be here" %}</h2>
-				<p id="result"></p>
+				<p id="result_p"></p>
 			</div>
 		<div class="well">
 			<h2>{% t title="HINT overview" %}</h2>
