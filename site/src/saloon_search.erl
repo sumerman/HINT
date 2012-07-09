@@ -40,11 +40,11 @@ render(Data) ->
 	D = [to_href(M) || M <- Data],
 	erlydtl:compile(
 		"site/priv/templates/search.dtl", 
-		hint_search, 
+		hint_search_view, 
 		[{out_dir, "site/ebin/"}, {custom_tags_modules, [saloon_lang]}]
 	),
 
-	{ok, Rendered} = hint_search:render([
+	{ok, Rendered} = hint_search_view:render([
 		{data, D}
 	]),
 	Rendered.
