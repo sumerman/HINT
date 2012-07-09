@@ -30,7 +30,7 @@ handle(Req, State) ->
 			{ok, Rep, State};
 		{'GET', _} ->
 			cowboy_http_req:reply(
-				301, [], "Stop!", Req
+				301, [], "~[,,_,,]:3", Req
 			)
 	end.
 
