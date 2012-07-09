@@ -72,7 +72,7 @@ init(Args) ->
 	{ok, #state{functions=FSet, modules=atoms_to_utf_set(Args), ets_m2fa=M2FA, ets_f2ma=F2MA}}.
 
 handle_call({store, Modules}, _From, State) when is_list(Modules) ->
-	?debugFmt("Handling call having ~nModules: ~p~n Functions: ~p~n In State", [sets:to_list(State#state.modules), sets:to_list(State#state.functions)]),
+	%?debugFmt("Handling call having ~nModules: ~p~n Functions: ~p~n In State", [sets:to_list(State#state.modules), sets:to_list(State#state.functions)]),
 	{ok, FSet, _} = hint_mfa_info_to_ets:import(Modules, State#state.ets_m2fa, State#state.ets_f2ma),
 	case sets:size(FSet) of
 		0 ->
@@ -84,18 +84,18 @@ handle_call({store, Modules}, _From, State) when is_list(Modules) ->
 handle_call({search, SearchString}, _From, State) ->
 	Req = hint_mfa_search_req:new(SearchString),
 	ModExprs = hint_mfa_search_req:module(Req),
-	FunExprs = hint_mfa_search_req:func(Req),
-	Arity    = hint_mfa_search_req:arity(Req),
-	ModExact = sets:filter(fun(Element) ->
+	_FunExprs = hint_mfa_search_req:func(Req),
+	_Arity    = hint_mfa_search_req:arity(Req),
+	_ModExact = sets:filter(fun(Element) ->
 				list_to_binary(proplists:get_value(exact, ModExprs)) == Element
 		end, State#state.modules),
-	[ModStartsWith, ModContains] = [sets:filter(fun(Element) ->
+	[_ModStartsWith, _ModContains] = [sets:filter(fun(Element) ->
 				case re:run(Element, proplists:get_value(ReMode, ModExprs), []) of
 					nomatch -> false;
 					_ -> true
 				end
 		end, State#state.modules) || ReMode <- [starts_with, contains]],
-	?debugFmt("me ~p msw ~p mc ~p", [sets:to_list(ModExact), sets:to_list(ModStartsWith), sets:to_list(ModContains)]),
+	%?debugFmt("me ~p msw ~p mc ~p", [sets:to_list(ModExact), sets:to_list(ModStartsWith), sets:to_list(ModContains)]),
 	{reply, ok, State};
 handle_call(_X,_Y,Z) ->
 	{reply, error, Z}.

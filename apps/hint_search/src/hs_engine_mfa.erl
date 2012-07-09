@@ -33,7 +33,7 @@ mfa_to_ets(MFAList, {M2FA, F2MA}) ->
 	{Ms, Fs}.
 
 modules_matching(Module, MFAs) ->
-	?debugFmt(">MODULE>>> ~p", [Module]),
+	%?debugFmt(">MODULE>>> ~p", [Module]),
 	case Module of
 		[] -> MFAs;
 		_   ->
@@ -41,7 +41,7 @@ modules_matching(Module, MFAs) ->
 			ModuleUniversum = atoms_to_utf_set([element(1, X) || X <- MFAs]),                     % I don't do drugs, honestly
 			%?debugFmt(">RELEVANT MODULES>>>~n~p", [sets:to_list(ModuleUniversum)]),             %  it's just time for spawnfest running out
 			MM = do_modules_matching(ModuleUniversum, hint_mfa_req:fuzzy_matches(ModuleString)), % ~jonn mostovoy
-			?debugFmt("~n!!!!!!!????? MFA ~p", [[MFA || {M,_,_}=MFA <- MFAs, lists:member(M, MM)]]),
+			%?debugFmt("~n!!!!!!!????? MFA ~p", [[MFA || {M,_,_}=MFA <- MFAs, lists:member(M, MM)]]),
 			[MFA || {M,_,_}=MFA <- MFAs, lists:member(M, MM)]
 	end
 .
@@ -60,7 +60,7 @@ do_modules_matching(RelevantModules, ModExprs) ->
 					_ -> true
 				end
 		end, RelevantModules) || ReMode <- [starts_with, contains]],
-	?debugMsg("Still Alive"),
+	%?debugMsg("Still Alive"),
 	% Треш, угар, содомия
 	[binary_to_atom(B,latin1)||B<-sets:to_list(ModContains)].
 	%{sets:to_list(ModExact), sets:to_list(ModStartsWith), sets:to_list(ModContains)}.

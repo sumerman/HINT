@@ -10,7 +10,6 @@ init(_, Req, _) ->
 	{ok, Req, 0}.
 
 handle(Req, State) ->
-	?debugMsg("handle"),
 	case cowboy_http_req:method(Req) of
 		{'POST', _} ->
 			R = case cowboy_http_req:body_qs(Req) of

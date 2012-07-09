@@ -48,7 +48,7 @@ do_import({M, [{F, A}|FAs]}, FSetAcc, {M2FA, F2MA}) ->
 		module_info ->
 			do_import({M, FAs}, FSetAcc, {M2FA, F2MA});
 		_ ->
-			?debugFmt("Adding function ~p/~p from module ~p to ets", [F, A, M]),
+			%?debugFmt("Adding function ~p/~p from module ~p to ets", [F, A, M]),
 			ets:insert(M2FA, {F, A, M}),
 			ets:insert(F2MA, {M, A, F}),
 			do_import({M, FAs}, sets:add_element(atom_to_binary(F, utf8), FSetAcc), {M2FA, F2MA})

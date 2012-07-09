@@ -7,22 +7,20 @@
 -include_lib("eunit/include/eunit.hrl").
 
 init({_Any, http}, Req, []) ->
-	?debugMsg("init"),
 	{ok, Req, 0}.
 
 handle(Req, State) ->
-	?debugMsg("handle"),
 	saloon_init:prepare(Req),
-	?debugFmt(
-		"erlydtl:compile: ~p~n", 
-		[
+	%?debugFmt(
+	%	"erlydtl:compile: ~p~n", 
+	%	[
 			erlydtl:compile(
 				"site/priv/templates/base_landing.dtl", 
 				main_dtl, 
 				[{out_dir, "site/ebin/"}, {custom_tags_modules, [saloon_lang]}]
-			)
-		]
-	),
+			),
+	%	]
+	%),
 	{ok, Rendered} = main_dtl:render([
 		%{name, <<"Forever Alone Guy">>},
 		%{friends, []},

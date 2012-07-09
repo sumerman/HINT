@@ -38,15 +38,14 @@
 							'/search',
 							{search: $('#search').val()},
 							function(result) {
-
-									resultpane.html(result);
+								resultpane.html(result);
 							}
 						);
 						return false;
 					})
 				});
 		</script>
-		{# for page to load quicker, javascript will be fed at the bottom of html #}
+		{# for page to load quicker, some of javascript will be fed at the bottom of html #}
 	</head>
 
 	<body>
