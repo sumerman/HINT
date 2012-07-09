@@ -5,27 +5,26 @@
 {% block whitespacefiller %}
 {% endblock %} I prefer to remove navbar from landing pages :) #}
 
+{% block fluid %}{% endblock %}
+
 {% block content %}
-<div class="row-fluid">
-	<div class="span7">
-		<div class="landing hero-unit">
-			<!---h1 class="visible-desktop">{% t text="HINT search engine" %}</h1>
-			<h1 class="hidden-desktop">{% t text="HINT search engine" %}</h1>
-			<br /--->
-			<p>
+<div class="row">
+	<div class="offset1 span10">
 				<form method="post" action="/" id="searchForm">
 					<label for="search">{% t text="Type your types" %}</label> 
-					<input type="text" name="q" id="search" />
+					<input type="text" name="q" id="search" class="span10" placeholder="proplists:?(any(), list()) -> any()" />
 				</form>
-			</p>
 			<div class="well" id="result">
 				<h2>{% t title="Your results will be here" %}</h2>
 				<p id="result"></p>
 			</div>
-		</div>
 		<div class="well">
 			<h2>{% t title="HINT overview" %}</h2>
-			{% t text="HINT overview" %}
+			{% t text="HINT overview" %}<br />
+			<a href="https://github.com/Spawnfest2012/HINT">{% t link="sf_repo" %}</a><br />
+			<a href="https://github.com/dmitriid/HINT/">{% t link="dima_repo" %}</a><br />
+			<a href="https://github.com/manpages/HINT/">{% t link="sweater_repo" %}</a><br />
+			<a href="https://github.com/nekrograve/HINT/">{% t link="nekro_repo" %}</a>
 		</div>
 	</div>
 	<div class="span5">

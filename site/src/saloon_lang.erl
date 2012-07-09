@@ -10,6 +10,42 @@
 
 %%spawnpoint
 
+t([{link,<<"nekro_repo">>}]) -> 
+	case saloon_ctx:language() of 
+		en -> <<"Valery Meleshkin's repository">>;
+		ru -> <<"nekro_repo">>;
+		lv -> <<"nekro_repo">>;
+		es -> <<"nekro_repo">>;
+		_ -> <<"*nekro_repo*">>
+	end;
+
+t([{link,<<"sweater_repo">>}]) -> 
+	case saloon_ctx:language() of 
+		en -> <<"Jonn Mostovoy's repository">>;
+		ru -> <<"sweater_repo">>;
+		lv -> <<"sweater_repo">>;
+		es -> <<"sweater_repo">>;
+		_ -> <<"*sweater_repo*">>
+	end;
+
+t([{link,<<"dima_repo">>}]) -> 
+	case saloon_ctx:language() of 
+		en -> <<"Dmitrii 'Mamut' Dimandt's repository">>;
+		ru -> <<"dima_repo">>;
+		lv -> <<"dima_repo">>;
+		es -> <<"dima_repo">>;
+		_ -> <<"*dima_repo*">>
+	end;
+
+t([{link,<<"sf_repo">>}]) -> 
+	case saloon_ctx:language() of 
+		en -> <<"Spawnfest competition repository">>;
+		ru -> <<"sf_repo">>;
+		lv -> <<"sf_repo">>;
+		es -> <<"sf_repo">>;
+		_ -> <<"*sf_repo*">>
+	end;
+
 t([{title,<<"Your results will be here">>}]) -> 
 	case saloon_ctx:language() of 
 		en -> <<"Your results will be here">>;
@@ -30,7 +66,7 @@ t([{text,<<"Type your types">>}]) ->
 
 t([{text,<<"HINT overview">>}]) -> 
 	case saloon_ctx:language() of 
-		en -> <<"HINT overview">>;
+		en -> <<"HINT is Erlang type search engine. See information about project on Github!">>;
 		ru -> <<"HINT overview">>;
 		lv -> <<"HINT overview">>;
 		es -> <<"HINT overview">>;
