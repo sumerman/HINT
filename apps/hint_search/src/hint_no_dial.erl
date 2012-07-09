@@ -24,8 +24,7 @@ extend_req(Req) ->
 	["-module('",temp_mod_name(),"').\n"
 		"-spec '", to_s(F), "'", S, "."].
 
-compile_request(PLT, String) ->
-	Req = hint_search_req:new(String),
+compile_request(PLT, Req) ->
 	File = temp_file(),
 	Data = extend_req(Req),
 	ok = file:write_file(File, Data),
@@ -44,10 +43,20 @@ compile_request(PLT, String) ->
 	{ok, {dialyzer_contracts:get_contract_return(C),
 			dialyzer_contracts:get_contract_args(C)}}.
 
-test_rank(Req, MFA) ->
+test_ranks(String) ->
 	PLT = dialyzer_plt:from_file(dialyzer_plt:get_default_plt()),
+	Req = hint_search_req:new(String),
 	{ok, RTS} = compile_request(PLT, Req),
-	{value, FTS} = dialyzer_plt:lookup(PLT, MFA),
+	Modules = sets:to_list(dialyzer_plt:all_modules(PLT)),
+	Fun = fun(Mod) ->
+			{value, Sigs} = dialyzer_plt:lookup_module(PLT, Mod),
+			[{MFA, test_rank(RTS, {FTR,FTA})} ||
+				{{_,_,A}=MFA, FTR, FTA} <- Sigs,
+				A =:= hint_search_req:arity(Req)]
+	end,
+	lists:reverse(lists:keysort(2,lists:flatmap(Fun,Modules))).
+
+test_rank(RTS, FTS) ->
 	RTSL = ts_to_list(RTS),
 	FTSL = ts_to_list(FTS),
 	lists:max([
