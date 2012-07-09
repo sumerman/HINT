@@ -1,4 +1,5 @@
 apps/*/ebin/*
+sites/ebin/*
 deps/
 rel/*
 !rel/files
