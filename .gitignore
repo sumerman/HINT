@@ -5,3 +5,4 @@ rel/*
 !rel/reltool.config
 *.draft.*
 *.log
+*.app
