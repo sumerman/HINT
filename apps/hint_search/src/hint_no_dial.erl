@@ -41,61 +41,52 @@ compile_request(PLT, Req) ->
 	A = hint_search_req:arity(Req),
 	{ok, {_, C}} = dialyzer_codeserver:lookup_mfa_contract({Mod, F, A}, CS3),
 	dialyzer_codeserver:delete(CS3),
-	{ok, {dialyzer_contracts:get_contract_return(C),
-			dialyzer_contracts:get_contract_args(C)}}.
+	{ok, C}.
 
-test_ranks(String) ->
-	PLT = dialyzer_plt:from_file(dialyzer_plt:get_default_plt()),
+test_ranks(PLT, String) ->
 	Req = hint_search_req:new(String),
 	{ok, RTS} = compile_request(PLT, Req),
 	Modules = sets:to_list(dialyzer_plt:all_modules(PLT)),
 	Fun = fun(Mod) ->
 			{value, Sigs} = dialyzer_plt:lookup_module(PLT, Mod),
-			[{MFA, test_rank(RTS, {FTR,FTA}), erl_types:t_to_string(erl_types:t_fun(FTA,FTR))} ||
+			[{MFA, test_rank(PLT, RTS, {FTR,FTA}), 
+					erl_types:t_to_string(erl_types:t_fun(FTA,FTR))} ||
 				{{_,_,A}=MFA, FTR, FTA} <- Sigs,
 				A =:= hint_search_req:arity(Req)]
 	end,
 	lists:reverse(lists:keysort(2,lists:flatmap(Fun,Modules))).
 
-test_rank({RTR, RTA}, FTS) ->
-	FTSL = ts_to_list(FTS),
-	lists:max([
-		lists:sum([rank(T1, T2) || 
-					{T1, T2} <- lists:zip([RTR|RTAR], FTSL)]) ||
-			RTAR <- rotations(RTA)]).
+test_rank(PLT, Cont, {Ret,Args}) ->
+	lists:max([rank(PLT, Cont, {Ret, ArgsR}) 
+			|| ArgsR <- rotations(Args)]).
 
-ts_to_list({Ret, L}) -> 
-	[Ret | L].
+rank(PLT, Cont, RA) ->
+	%Sign = erl_types:t_fun(Args, Ret),
+	%Warn = dialyzer_contracts:check_contract(Cont, Sign),
+	Warn = get_invalid_contract_warnings_fun(Cont, RA, PLT),
+	rank_warning(Warn).
 
-rank(T1, T2) ->
-	try {erl_types:t_to_tlist(T1), 
-			erl_types:t_to_tlist(T2)} of
-		{[_T],TL} ->
-			lists:max([rank_(T1, T2i) || T2i <- TL]);
-		_  -> 
-			rank_(T1, T2)
-	catch
-		_:_ -> 
-			rank_(T1, T2)
-	end.
-
-rank_(T1, T2) ->
-	Eql = erl_types:t_is_equal(T1, T2),
-	Ins = erl_types:t_is_instance(T1, T2),
-	Sub = erl_types:t_is_subtype(T1, T2),
-	Sup = erl_types:t_is_subtype(T2, T1),
-	Any = (T2 == erl_types:t_any()),
-	if
-		Eql  -> 0.9;
-		Sup  -> 0;
-		Sub  -> 
-			if
-				Any  -> -0.1;
-				true ->  0.2
-			end;
-		Ins  -> 0.3;
-		true -> -0.5
-	end.
+rank_warning(ok) -> 
+	1;
+rank_warning(contract_diff) ->
+	-0.5;
+rank_warning(contract_subtype) ->
+	-0.2;
+rank_warning(contract_supertype) ->
+	-0.09;
+rank_warning(contract_range) ->
+	-0.2;
+rank_warning(invalid_contract) ->
+	-0.7;
+rank_warning(extra_range) ->
+	-0.2;
+% rank_warning({_Perm, overlapping_contract, _}) ->
+% 	0;
+% rank_warning({_Perm, spec_missing_fun, _}) ->
+% 	0;
+rank_warning(_) ->
+	-0.9.
+	
 
 rotate([H|L]) ->
 	L ++ [H].
@@ -122,3 +113,140 @@ to_s(A) when is_atom(A) ->
 to_s(I) when is_integer(I) ->
 	integer_to_list(I);
 to_s(S) -> S.
+
+
+%% Code based (mostly copy-paste) on 'dialyzer_contracts.erl'
+
+-include_lib("dialyzer/src/dialyzer.hrl").
+
+get_invalid_contract_warnings_fun(Contract, {Ret, Args}, Plt) ->
+	Rec = dialyzer_plt:get_types(Plt),
+	Sig = erl_types:t_fun(Args, Ret),
+	case dialyzer_contracts:check_contract(Contract, Sig) of
+		{error, invalid_contract} ->
+			invalid_contract;
+		{error, {extra_range, ExtraRanges, _STRange}} ->
+			Warn = case t_from_forms_without_remote(Contract#contract.forms, Rec) of
+				{ok, NoRemoteType} ->
+					CRet = erl_types:t_fun_range(NoRemoteType),
+					erl_types:t_is_subtype(ExtraRanges, CRet);
+				unsupported ->
+					true
+			end,
+			case Warn of
+				true ->
+					extra_range;
+				false ->
+					ok
+			end;
+		{error, _Msg} ->
+			contract_syntax;
+		ok ->
+			Domain = dialyzer_contracts:get_contract_args(Contract),
+			Range  = dialyzer_contracts:get_contract_return(Contract),
+			CSig0 = erl_types:t_fun(Domain, Range),
+			CSig  = erl_types:subst_all_vars_to_any(CSig0),
+			picky_contract_check(CSig, Sig, Contract, Rec)
+	end.
+
+picky_contract_check(CSig0, Sig0, Contract, RecDict) ->
+	CSig = erl_types:t_abstract_records(CSig0, RecDict),
+	Sig  = erl_types:t_abstract_records(Sig0, RecDict),
+	case erl_types:t_is_equal(CSig, Sig) of
+		true  -> ok;
+		false ->
+			case (erl_types:t_is_none(erl_types:t_fun_range(Sig)) andalso
+					erl_types:t_is_unit(erl_types:t_fun_range(CSig))) of
+				true  -> ok;
+				false ->
+					extra_contract_warning(Contract, CSig, Sig, RecDict)
+			end
+	end.
+
+extra_contract_warning(Contract, CSig, Sig, RecDict) ->
+	SigString = lists:flatten(dialyzer_utils:format_sig(Sig, RecDict)),
+	ContractString0 = lists:flatten(dialyzer_utils:format_sig(CSig, RecDict)),
+	%% The only difference is in record fields containing 'undefined' or not.
+	IsUndefRecordFieldsRelated = SigString =:= ContractString0,
+	{IsRemoteTypesRelated, SubtypeRelation} =
+		is_remote_types_related(Contract, CSig, Sig, RecDict),
+	case IsUndefRecordFieldsRelated orelse IsRemoteTypesRelated of
+		true ->
+			ok;
+		false ->
+			case SubtypeRelation of
+				contract_is_subtype ->
+					contract_subtype;
+				contract_is_supertype ->
+					contract_supertype;
+				neither ->
+					contract_diff
+			end
+	end.
+
+is_remote_types_related(Contract, CSig, Sig, RecDict) ->
+	case erl_types:t_is_subtype(CSig, Sig) of
+		true ->
+			{false, contract_is_subtype};
+		false ->
+			case erl_types:t_is_subtype(Sig, CSig) of
+				true ->
+					case t_from_forms_without_remote(Contract#contract.forms, RecDict) of
+						{ok, NoRemoteTypeSig} ->
+							case blame_remote(CSig, NoRemoteTypeSig, Sig) of
+								true ->
+									{true, neither};
+								false ->
+									{false, contract_is_supertype}
+							end;
+						unsupported ->
+							{false, contract_is_supertype}
+					end;
+				false ->
+					{false, neither}
+			end
+	end.
+
+t_from_forms_without_remote([{FType, []}], RecDict) ->
+	Type0 = erl_types:t_from_form(FType, RecDict),
+	Map =
+		fun(Type) ->
+			case erl_types:t_is_remote(Type) of
+				true -> erl_types:t_none();
+				false -> Type
+			end
+	end,
+	{ok, erl_types:t_map(Map, Type0)};
+t_from_forms_without_remote([{_FType, _Constrs}], _RecDict) ->
+	%% 'When' constraints
+	unsupported;
+t_from_forms_without_remote(_Forms, _RecDict) ->
+	%% Lots of forms
+	unsupported.
+
+blame_remote(ContractSig, NoRemoteContractSig, Sig) ->
+	CArgs  = erl_types:t_fun_args(ContractSig),
+	CRange = erl_types:t_fun_range(ContractSig),
+	NRArgs = erl_types:t_fun_args(NoRemoteContractSig),
+	NRRange = erl_types:t_fun_range(NoRemoteContractSig),
+	SArgs = erl_types:t_fun_args(Sig),
+	SRange = erl_types:t_fun_range(Sig),
+	blame_remote_list([CRange|CArgs], [NRRange|NRArgs], [SRange|SArgs]).
+
+blame_remote_list([], [], []) ->
+	true;
+blame_remote_list([CArg|CArgs], [NRArg|NRArgs], [SArg|SArgs]) ->
+	case erl_types:t_is_equal(CArg, NRArg) of
+		true ->
+			case not erl_types:t_is_equal(CArg, SArg) of
+				true  -> false;
+				false -> blame_remote_list(CArgs, NRArgs, SArgs)
+			end;
+		false ->
+			case erl_types:t_is_subtype(SArg, NRArg)
+				andalso not erl_types:t_is_subtype(NRArg, SArg) of
+				true  -> false;
+				false -> blame_remote_list(CArgs, NRArgs, SArgs)
+			end
+	end.
+
