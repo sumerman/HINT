@@ -32,14 +32,15 @@ compile_request(PLT, Req) ->
 	rm_temp_file(File),
 	CS0 = dialyzer_codeserver:new(),
 	{ok, RecDict} = dialyzer_utils:get_record_and_type_info(AbstractCode),
-	Mod = list_to_atom(filename:basename(File, ".erl")),
+	Mod = list_to_atom(temp_mod_name()),
 	{ok, SpecDict, CbDict} = dialyzer_utils:get_spec_info(Mod, AbstractCode, RecDict),
 	CS1 = dialyzer_codeserver:store_temp_records(Mod, RecDict, CS0),
 	CS2 = dialyzer_codeserver:store_temp_contracts(Mod, SpecDict, CbDict, CS1),
-	CS3 = process_remote_types(CS2, PLT), % XXX change to the PLT
+	CS3 = process_remote_types(CS2, PLT), 
 	F = hint_search_req:func(Req), 
 	A = hint_search_req:arity(Req),
 	{ok, {_, C}} = dialyzer_codeserver:lookup_mfa_contract({Mod, F, A}, CS3),
+	dialyzer_codeserver:delete(CS3),
 	{ok, {dialyzer_contracts:get_contract_return(C),
 			dialyzer_contracts:get_contract_args(C)}}.
 
@@ -50,19 +51,18 @@ test_ranks(String) ->
 	Modules = sets:to_list(dialyzer_plt:all_modules(PLT)),
 	Fun = fun(Mod) ->
 			{value, Sigs} = dialyzer_plt:lookup_module(PLT, Mod),
-			[{MFA, test_rank(RTS, {FTR,FTA})} ||
+			[{MFA, test_rank(RTS, {FTR,FTA}), erl_types:t_to_string(erl_types:t_fun(FTA,FTR))} ||
 				{{_,_,A}=MFA, FTR, FTA} <- Sigs,
 				A =:= hint_search_req:arity(Req)]
 	end,
 	lists:reverse(lists:keysort(2,lists:flatmap(Fun,Modules))).
 
-test_rank(RTS, FTS) ->
-	RTSL = ts_to_list(RTS),
+test_rank({RTR, RTA}, FTS) ->
 	FTSL = ts_to_list(FTS),
 	lists:max([
 		lists:sum([rank(T1, T2) || 
-				{T1, T2} <- lists:zip(RTSLR, FTSL)]) ||
-			RTSLR <- rotations(RTSL)]).
+					{T1, T2} <- lists:zip([RTR|RTAR], FTSL)]) ||
+			RTAR <- rotations(RTA)]).
 
 ts_to_list({Ret, L}) -> 
 	[Ret | L].
@@ -71,10 +71,15 @@ rank(T1, T2) ->
 	Eql = erl_types:t_is_equal(T1, T2),
 	Sub = erl_types:t_is_subtype(T1, T2),
 	Sup = erl_types:t_is_subtype(T2, T1),
+	Spr = (erl_types:t_sup(T1, T2) == erl_types:t_any()),
 	if
-		Eql  -> 0.5;
-		Sub  -> 0.3;
-		Sup  -> 0.1;
+		Eql  -> 0.9;
+		Sub  -> 
+			if
+				Spr  -> -0.1;
+				true -> 0.2
+			end;
+		Sup  -> -0.2;
 		true -> -0.5
 	end.
 
@@ -91,10 +96,12 @@ rotations(L) ->
 process_remote_types(CodeServer1, PLT) ->
 	NewRecords = dialyzer_codeserver:get_temp_records(CodeServer1),
 	OldRecords = dialyzer_plt:get_types(PLT), 
+	OldExTypes = dialyzer_plt:get_exported_types(PLT),
 	MergedRecords = dialyzer_utils:merge_records(NewRecords, OldRecords),
 	CodeServer2 = dialyzer_codeserver:set_temp_records(MergedRecords, CodeServer1),
-	CodeServer3 = dialyzer_utils:process_record_remote_types(CodeServer2),
-	dialyzer_contracts:process_contract_remote_types(CodeServer3).
+	CodeServer3 = dialyzer_codeserver:insert_temp_exported_types(OldExTypes, CodeServer2),
+	CodeServer4 = dialyzer_utils:process_record_remote_types(CodeServer3),
+	dialyzer_contracts:process_contract_remote_types(CodeServer4).
 
 to_s(A) when is_atom(A) ->
 	atom_to_binary(A, latin1);
