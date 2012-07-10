@@ -5,71 +5,113 @@
 
 -module(hint_no_dial).
 
--compile(export_all).
+-export([apply/2, prepare/3]).
+-export([test_ranks/2]).
 
-temp_mod_name() -> 
-	atom_to_list(?MODULE) ++ "_temp_mod".
+-export_type([state/0, entry/0]).
 
-temp_file() ->
-	Ext = ".erl",
-	Dir = mochitemp:mkdtemp(),
-	filename:join(Dir, [temp_mod_name(), Ext]).
+-record(state, {
+		plt = dialyzer_plt:new() :: dialyzer_plt:plt(),
+		req = undefined :: {erl_types:erl_type(), [erl_types:erl_type()]}
+		}).
 
-rm_temp_file(File) ->
-	mochitemp:rmtempdir(filename:dirname(File)).
+-opaque state() :: #state{}.
+-type entry() :: {mfa(), number(), proplists:proplist()}.
 
-extend_req(Req) ->
+-spec apply(state(), entry()) -> entry().
+apply(#state{plt=PLT, req=RTS}, {MFA, PrevRank, Extra}) ->
+	case dialyzer_plt:lookup(PLT, MFA) of
+		none -> PrevRank;
+		{value, {FTR, FTA}} -> 
+			TypeString = erl_types:t_to_string(erl_types:t_fun(FTA,FTR)),
+			{MFA, (PrevRank+fun_rank(RTS, {FTR, FTA})), 
+				[{type_string, TypeString}|Extra]}
+	end.
+
+-spec prepare(proplists:proplist(), dialyzer_plt:plt(), 
+		hint_search_req:req()) -> state().
+prepare(_Opts, PLT, Req) ->
+	{ok, R} = compile_request_to_sig(PLT, Req),
+	{ok, #state{
+			plt = PLT,
+			req = R}}.
+
+%% For testing purposes only
+test_ranks(PLT, String) ->
+	Req = hint_search_req:new(String),
+	{ok, S} = prepare([], PLT, Req),
+	Modules = sets:to_list(dialyzer_plt:all_modules(PLT)),
+	Fun = fun(Mod) ->
+			{value, Sigs} = dialyzer_plt:lookup_module(PLT, Mod),
+			[?MODULE:apply(S, {MFA, 1, []}) ||
+				{{_,_,A}=MFA, _, _} <- Sigs,
+				A =:= hint_search_req:arity(Req)]
+	end,
+	lists:reverse(lists:keysort(2,lists:flatmap(Fun,Modules))).
+
+compile_request_to_sig(PLT, Req) ->
+	Mod = list_to_atom(temp_mod_name()),
+	F = hint_search_req:func(Req), 
+	A = hint_search_req:arity(Req),
+	{ok, AbstractCode} = abstract_code_for_req(Req),
+	{ok, Contract} = cotract_for_func_code(PLT, {Mod, F, A}, AbstractCode),
+	{ok, {dialyzer_contracts:get_contract_return(Contract),
+			dialyzer_contracts:get_contract_args(Contract)}}.
+
+%% Gen magic-file and extracts abstract code
+abstract_code_for_req(Req) ->
+	File = temp_file(),
+	Data = temp_file_contents(Req),
+	ok = file:write_file(File, Data),
+	{ok, AbstractCode} = epp:parse_file(File, [], []),
+	rm_temp_file(File),
+	{ok, AbstractCode}.
+
+temp_file_contents(Req) ->
 	F = hint_search_req:func(Req), 
 	S = hint_search_req:string(Req),
 	["-module('",temp_mod_name(),"').\n"
 		"-spec '", to_s(F), "'", S, "."].
 
-compile_request(PLT, Req) ->
-	File = temp_file(),
-	Data = extend_req(Req),
-	ok = file:write_file(File, Data),
-	{ok, AbstractCode} = epp:parse_file(File, [], []),
-	rm_temp_file(File),
+cotract_for_func_code(PLT, {Mod,_,_}=MFA, AbstractCode) ->
 	CS0 = dialyzer_codeserver:new(),
+	CS1 = push_code_into_codeserver(CS0, Mod, AbstractCode),
+	CS2 = process_remote_types(CS1, PLT), 
+	{ok, {_, Contract}} = dialyzer_codeserver:lookup_mfa_contract(MFA, CS2),
+	dialyzer_codeserver:delete(CS2),
+	{ok, Contract}.
+
+push_code_into_codeserver(CS, Mod, AbstractCode) ->
 	{ok, RecDict} = dialyzer_utils:get_record_and_type_info(AbstractCode),
-	Mod = list_to_atom(temp_mod_name()),
 	{ok, SpecDict, CbDict} = dialyzer_utils:get_spec_info(Mod, AbstractCode, RecDict),
-	CS1 = dialyzer_codeserver:store_temp_records(Mod, RecDict, CS0),
-	CS2 = dialyzer_codeserver:store_temp_contracts(Mod, SpecDict, CbDict, CS1),
-	CS3 = process_remote_types(CS2, PLT), 
-	F = hint_search_req:func(Req), 
-	A = hint_search_req:arity(Req),
-	{ok, {_, C}} = dialyzer_codeserver:lookup_mfa_contract({Mod, F, A}, CS3),
-	dialyzer_codeserver:delete(CS3),
-	{ok, {dialyzer_contracts:get_contract_return(C),
-			dialyzer_contracts:get_contract_args(C)}}.
+	CS1 = dialyzer_codeserver:store_temp_records(Mod, RecDict, CS),
+	dialyzer_codeserver:store_temp_contracts(Mod, SpecDict, CbDict, CS1).
 
-test_ranks(String) ->
-	PLT = dialyzer_plt:from_file(dialyzer_plt:get_default_plt()),
-	Req = hint_search_req:new(String),
-	{ok, RTS} = compile_request(PLT, Req),
-	Modules = sets:to_list(dialyzer_plt:all_modules(PLT)),
-	Fun = fun(Mod) ->
-			{value, Sigs} = dialyzer_plt:lookup_module(PLT, Mod),
-			[{MFA, test_rank(RTS, {FTR,FTA}), erl_types:t_to_string(erl_types:t_fun(FTA,FTR))} ||
-				{{_,_,A}=MFA, FTR, FTA} <- Sigs,
-				A =:= hint_search_req:arity(Req)]
+process_remote_types(CodeServer1, PLT) ->
+	NewRecords = dialyzer_codeserver:get_temp_records(CodeServer1),
+	OldRecords = dialyzer_plt:get_types(PLT), 
+	OldExTypes = dialyzer_plt:get_exported_types(PLT),
+	MergedRecords = dialyzer_utils:merge_records(NewRecords, OldRecords),
+	CodeServer2 = dialyzer_codeserver:set_temp_records(MergedRecords, CodeServer1),
+	CodeServer3 = dialyzer_codeserver:insert_temp_exported_types(OldExTypes, CodeServer2),
+	CodeServer4 = dialyzer_utils:process_record_remote_types(CodeServer3),
+	dialyzer_contracts:process_contract_remote_types(CodeServer4).
+
+fun_rank({Res, Args}=_ReqResArgs, CandidateResArgs) ->
+	CRAList  = ts_to_list(CandidateResArgs),
+	RotsRank = fun(ArgsRotation) ->
+			lists:sum(lists:zipwith(fun types_rank/2, 
+					[Res|ArgsRotation], CRAList)) 
 	end,
-	lists:reverse(lists:keysort(2,lists:flatmap(Fun,Modules))).
-
-test_rank({RTR, RTA}, FTS) ->
-	FTSL = ts_to_list(FTS),
-	lists:max([
-		lists:sum([rank(T1, T2) || 
-					{T1, T2} <- lists:zip([RTR|RTAR], FTSL)]) ||
-			RTAR <- rotations(RTA)]).
+	lists:max(lists:map(RotsRank, rotations(Args))).
 
 ts_to_list({Ret, L}) -> 
 	[Ret | L].
 
-rank(T1, T2) ->
+types_rank(T1, T2) ->
 	try {erl_types:t_to_tlist(T1), 
 			erl_types:t_to_tlist(T2)} of
+		%% T2 is a product while T1 is not.
 		{[_T],TL} ->
 			lists:max([rank_(T1, T2i) || T2i <- TL]);
 		_  -> 
@@ -102,23 +144,23 @@ rotate([H|L]) ->
 
 rotations(L) ->
 	tl(lists:foldl(
-		fun(_,R) ->
-			R1 = rotate(hd(R)),
-			[R1|R]
+			fun(_,R) ->
+					[rotate(hd(R))|R]
 			end, [L], L)).
-
-process_remote_types(CodeServer1, PLT) ->
-	NewRecords = dialyzer_codeserver:get_temp_records(CodeServer1),
-	OldRecords = dialyzer_plt:get_types(PLT), 
-	OldExTypes = dialyzer_plt:get_exported_types(PLT),
-	MergedRecords = dialyzer_utils:merge_records(NewRecords, OldRecords),
-	CodeServer2 = dialyzer_codeserver:set_temp_records(MergedRecords, CodeServer1),
-	CodeServer3 = dialyzer_codeserver:insert_temp_exported_types(OldExTypes, CodeServer2),
-	CodeServer4 = dialyzer_utils:process_record_remote_types(CodeServer3),
-	dialyzer_contracts:process_contract_remote_types(CodeServer4).
 
 to_s(A) when is_atom(A) ->
 	atom_to_binary(A, latin1);
 to_s(I) when is_integer(I) ->
 	integer_to_list(I);
 to_s(S) -> S.
+
+temp_mod_name() -> 
+	atom_to_list(?MODULE) ++ "_temp_mod".
+
+temp_file() ->
+	Ext = ".erl",
+	Dir = mochitemp:mkdtemp(),
+	filename:join(Dir, [temp_mod_name(), Ext]).
+
+rm_temp_file(File) ->
+	mochitemp:rmtempdir(filename:dirname(File)).
