@@ -3,7 +3,7 @@
 %%% @copyright 2012 HINT Spawnfest Team
 %%%-------------------------------------------------------------------
 
--module(hint_no_dial).
+-module(hs_stage_types).
 
 -export([apply/2, prepare/3]).
 -export([test_ranks/2]).
@@ -51,7 +51,7 @@ test_ranks(PLT, String) ->
 
 compile_request_to_sig(PLT, Req) ->
 	Mod = list_to_atom(temp_mod_name()),
-	F = hint_search_req:func(Req), 
+	F = Mod,
 	A = hint_search_req:arity(Req),
 	{ok, AbstractCode} = abstract_code_for_req(Req),
 	{ok, Contract} = cotract_for_func_code(PLT, {Mod, F, A}, AbstractCode),
@@ -68,10 +68,9 @@ abstract_code_for_req(Req) ->
 	{ok, AbstractCode}.
 
 temp_file_contents(Req) ->
-	F = hint_search_req:func(Req), 
 	S = hint_search_req:string(Req),
 	["-module('",temp_mod_name(),"').\n"
-		"-spec '", to_s(F), "'", S, "."].
+		"-spec '", temp_mod_name(), "'", S, "."].
 
 cotract_for_func_code(PLT, {Mod,_,_}=MFA, AbstractCode) ->
 	CS0 = dialyzer_codeserver:new(),
@@ -100,8 +99,9 @@ process_remote_types(CodeServer1, PLT) ->
 fun_rank({Res, Args}=_ReqResArgs, CandidateResArgs) ->
 	CRAList  = ts_to_list(CandidateResArgs),
 	RotsRank = fun(ArgsRotation) ->
-			lists:sum(lists:zipwith(fun types_rank/2, 
-					[Res|ArgsRotation], CRAList)) 
+			ARanks = lists:zipwith(fun types_rank/2, 
+								[Res|ArgsRotation], CRAList),
+			lists:sum(ARanks) / length(ARanks) 
 	end,
 	lists:max(lists:map(RotsRank, rotations(Args))).
 
@@ -147,12 +147,6 @@ rotations(L) ->
 			fun(_,R) ->
 					[rotate(hd(R))|R]
 			end, [L], L)).
-
-to_s(A) when is_atom(A) ->
-	atom_to_binary(A, latin1);
-to_s(I) when is_integer(I) ->
-	integer_to_list(I);
-to_s(S) -> S.
 
 temp_mod_name() -> 
 	atom_to_list(?MODULE) ++ "_temp_mod".
