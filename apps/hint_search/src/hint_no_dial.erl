@@ -68,18 +68,32 @@ ts_to_list({Ret, L}) ->
 	[Ret | L].
 
 rank(T1, T2) ->
+	try {erl_types:t_to_tlist(T1), 
+			erl_types:t_to_tlist(T2)} of
+		{[_T],TL} ->
+			lists:max([rank_(T1, T2i) || T2i <- TL]);
+		_  -> 
+			rank_(T1, T2)
+	catch
+		_:_ -> 
+			rank_(T1, T2)
+	end.
+
+rank_(T1, T2) ->
 	Eql = erl_types:t_is_equal(T1, T2),
+	Ins = erl_types:t_is_instance(T1, T2),
 	Sub = erl_types:t_is_subtype(T1, T2),
 	Sup = erl_types:t_is_subtype(T2, T1),
-	Spr = (erl_types:t_sup(T1, T2) == erl_types:t_any()),
+	Any = (T2 == erl_types:t_any()),
 	if
 		Eql  -> 0.9;
+		Sup  -> 0;
 		Sub  -> 
 			if
-				Spr  -> -0.1;
-				true -> 0.2
+				Any  -> -0.1;
+				true ->  0.2
 			end;
-		Sup  -> -0.2;
+		Ins  -> 0.3;
 		true -> -0.5
 	end.
 
