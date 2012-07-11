@@ -20,7 +20,7 @@ handle(Req, State) ->
 							{error, _Reason} -> render(error);
 							{ok, Data} -> 
 								?debugFmt("Results for query:~n~p", [Data]),
-								Data1 = lists:sublist(Data, 10),
+								Data1 = lists:sublist(Data, 30),
 								render(Data1)
 						end;
 					_ -> 
