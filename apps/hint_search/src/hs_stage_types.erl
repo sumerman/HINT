@@ -5,10 +5,12 @@
 
 -module(hs_stage_types).
 
+-behaviour(hs_stage).
+
 -export([apply/2, prepare/3]).
 -export([test_ranks/2]).
 
--export_type([state/0, entry/0]).
+-export_type([state/0]).
 
 -record(state, {
     plt = dialyzer_plt:new() :: dialyzer_plt:plt(),
@@ -17,9 +19,8 @@
     }).
 
 -opaque state() :: #state{}.
--type entry() :: {mfa(), number(), proplists:proplist()}.
 
--spec apply(state(), entry()) -> entry().
+-spec apply(state(), hs_stage:entry()) -> hs_stage:entry().
 apply(#state{plt=PLT, req=RTS}, {MFA, PrevRank, Extra}) ->
   case dialyzer_plt:lookup(PLT, MFA) of
     none -> PrevRank;
@@ -30,7 +31,7 @@ apply(#state{plt=PLT, req=RTS}, {MFA, PrevRank, Extra}) ->
   end.
 
 -spec prepare(proplists:proplist(), dialyzer_plt:plt(), 
-              hint_search_req:req()) -> state().
+              hint_search_req:req()) -> {ok, state()}.
 prepare(_Opts, PLT, Req) ->
   {ok, R} = compile_request_to_sig(PLT, Req),
   {ok, #state{
