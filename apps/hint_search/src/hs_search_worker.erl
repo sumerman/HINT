@@ -22,22 +22,23 @@
 
 -type stage_desc() :: {module(), proplists:proplist(), term()}.
 -record(state, { 
-    stages = [] :: [stage_desc()], 
-    plt    = dialyzer_plt:new() :: dialyzer_plt:plt() 
+    stages  = [] :: [stage_desc()], 
+    plt_src = dialyzer_plt:get_default_plt() 
+              :: file:filename() 
+               | {module(), atom(), list()},
+    plt     = undefined :: dialyzer_plt:plt() 
     }).
 
 %% ------------------------------------------------------------------
 %% API Function Definitions
 %% ------------------------------------------------------------------
 
-start_link(Stages) ->
-  DefPath = dialyzer_plt:get_default_plt(),
-  PLT = dialyzer_plt:from_file(DefPath),
-  start_link(PLT, Stages).
+start_link(PLTSrc, Stages) ->
+  start_link(?MODULE, [{stages, Stages}, 
+                       {plt_src, PLTSrc}]).
 
-start_link(PLT, Stages) ->
-  gen_server:start_link(?MODULE, [{stages, Stages}, 
-                                  {plt, PLT}], []).
+start_link(Args) ->
+  gen_server:start_link(?MODULE, Args, []).
 
 stop(Wrk) ->
   gen_server:call(Wrk, stop).
@@ -52,12 +53,14 @@ q(Wrk, Req) ->
 %% ------------------------------------------------------------------
 
 init(Args) ->
-  RawStages = proplists:get_value(stages, Args, []),
+  RawStages = proplists:get_value(stages, Args, fail_on_this),
   Stages = uniform_stages(RawStages),
-  PLT = proplists:get_value(plt, Args),
+  DefSrc = dialyzer_plt:get_default_plt(),
+  PLTSrc = proplists:get_value(plt_src, Args, DefSrc),
+  self() ! load_plt,
   {ok, #state{
-      stages = Stages,
-      plt = PLT
+      stages  = Stages,
+      plt_src = PLTSrc
       }}.
 
 handle_call(stop, _From, State) ->
@@ -70,6 +73,13 @@ handle_call({q, Req}, _From, State) ->
 
 handle_cast(_Msg, State) ->
   {noreply, State}.
+
+handle_info(load_plt, #state{ plt_src = {M,F,A} } = State) ->
+  PLT = apply(M, F, A),
+  {noreply, State#state{ plt=PLT }};
+handle_info(load_plt, #state{ plt_src = Path } = State) ->
+  PLT = dialyzer_plt:from_file(Path),
+  {noreply, State#state{ plt=PLT }};
 
 handle_info(_Info, State) ->
   {noreply, State}.
@@ -152,7 +162,6 @@ prepare_stage({Mod, Opt, _OldState}, PLT, Req) ->
       {undefined, [], undefined}
   end.
 
-
 %%
 %% Tests
 %%
@@ -165,9 +174,15 @@ request() ->
 stages() ->
   [hs_stage_arity, {hs_stage_types, []}].
 
-setup() ->
+setup_default() ->
   %% TODO don't use default PLT for this test
-  {ok, Wrk} = start_link(stages()),
+  {ok, Wrk} = start_link([{stages, stages()}]),
+  Wrk.
+
+setup_mfa() ->
+  PltGen = {hs_biftab_plt, tabs_to_plt, [["../priv"]]},
+  {ok, Wrk} = start_link([{stages, stages()}, 
+                          {plt_src, PltGen}]),
   Wrk.
 
 cleanup(Wrk) ->
@@ -181,7 +196,7 @@ get_first(N, [E | List]) ->
 do_search(Wrk) ->
   Req = hint_search_req:new(request()),
   {ok, Res} = q(Wrk, Req),
-  ?debugFmt("Search result is: ~p~n", [get_first(5, Res)]),
+  ?debugFmt("~nTop results: ~p~n", [get_first(5, Res)]),
   Res.
 
 is_valid_search_reuslt([]) -> true;
@@ -199,9 +214,16 @@ smth_found_and_well_formated(Wrk) ->
    ?_assert(is_valid_search_reuslt(do_search(Wrk)))].
 
 well_formatted_result_test_() ->
-  {setup,
-   fun setup/0, fun cleanup/1,
-   fun smth_found_and_well_formated/1}.
+  {"Search result for defult PLT is a descending oredered list",
+   {setup,
+    fun setup_default/0, fun cleanup/1,
+    fun smth_found_and_well_formated/1}}.
+
+mfa_plt_gen_test_() ->
+  {"Search result for generated PLT (from bif.tab) is a descending oredered list",
+   {setup,
+    fun setup_mfa/0, fun cleanup/1,
+    fun smth_found_and_well_formated/1}}.
 
 -endif.
 
