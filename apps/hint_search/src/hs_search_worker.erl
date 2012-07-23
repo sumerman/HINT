@@ -134,7 +134,7 @@ process(#state{ plt=PLT } = State) ->
       {value, Sigs} = dialyzer_plt:lookup_module(PLT, Mod),
       process_entries(State, Sigs)
   end,
-  lists:reverse(lists:keysort(2, lists:flatmap(Fun, Modules))).
+  lists:reverse(lists:sort(lists:flatmap(Fun, Modules))).
 
 process_entries(State, Entries) ->
   lists:foldl(fun(Entry, Res) ->
@@ -183,7 +183,7 @@ prepare_stage({Mod, Opt, _OldState}, PLT, Req) ->
     _:Reason ->
       error_logger:warning_msg(
         "Stage ~p failed to prepare for request ~p. Reason: ~p",
-        [Mod, Req, Reason]),
+        [Mod, Req, {Reason, erlang:get_stacktrace()}]),
       {undefined, [], undefined}
   end.
 
@@ -238,11 +238,11 @@ do_search(Wrk, Range) ->
   Res.
 
 is_valid_search_reuslt([]) -> true;
-is_valid_search_reuslt([{MFA, Score1, _Ex},
-                        {_, Score2, _} | Rest])
+is_valid_search_reuslt([{Score1, MFA, _Ex},
+                        {Score2, _,     _} | Rest])
     when (Score1 >= Score2) and (tuple_size(MFA) == 3) ->
   is_valid_search_reuslt(Rest);
-is_valid_search_reuslt([{MFA, _Score, _Ex} | Rest])
+is_valid_search_reuslt([{_Score, MFA, _Ex} | Rest])
     when (tuple_size(MFA) == 3) ->
   is_valid_search_reuslt(Rest);
 is_valid_search_reuslt(_) -> false.

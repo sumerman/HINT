@@ -48,5 +48,5 @@ handle_info(_, State) ->
 code_change(_, State, _) ->
   {ok, State}.
 
-terminate(shutdown, _State) ->
+terminate(_Reason, _State) ->
   ok.

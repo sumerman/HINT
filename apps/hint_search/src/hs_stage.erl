@@ -8,7 +8,7 @@
 -export([empty_entry_for_mfa/1]).
 -export_type([entry/0]).
 
--type entry() :: {mfa(), number(), proplists:proplist()}.
+-type entry() :: {number(), mfa(), proplists:proplist()}.
 
 -callback apply(State::term(), entry()) -> entry() | skip | ignore.
 -callback prepare(proplists:proplist(), dialyzer_plt:plt(), 
@@ -17,6 +17,6 @@
   {error, Reason::term}.
 
 empty_entry_for_mfa(MFA) ->
-  {MFA, 0, []}.
+  {0, MFA, []}.
 
 

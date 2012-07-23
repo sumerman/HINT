@@ -17,7 +17,7 @@
 
 -opaque state() :: #state{}.
 
-apply(#state{ req_arity=Ar }, {{_M,_F,Ar}, _Rank, _Ex} = Entry) 
+apply(#state{ req_arity=Ar }, {_Rank, {_M,_F,Ar}, _Ex} = Entry) 
     when is_integer(Ar) ->
   Entry;
 apply(_, _Entry) -> skip.

@@ -57,7 +57,7 @@ render(Data) ->
 	]),
 	Rendered.
 
-to_href({MFA, Weight, Extra}) ->
+to_href({Weight, MFA, Extra}) ->
 	FunctionName = function_name(MFA),
         FunctionType = function_type(Extra),
 	W = io_lib:format("~.1f",[Weight]),
