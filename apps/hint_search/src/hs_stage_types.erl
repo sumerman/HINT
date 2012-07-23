@@ -21,12 +21,12 @@
 -opaque state() :: #state{}.
 
 -spec apply(state(), hs_stage:entry()) -> hs_stage:entry().
-apply(#state{plt=PLT, req=RTS}, {MFA, PrevRank, Extra}) ->
+apply(#state{plt=PLT, req=RTS}, {PrevRank, MFA, Extra}) ->
   case dialyzer_plt:lookup(PLT, MFA) of
     none -> PrevRank;
     {value, {FTR, FTA}} -> 
       TypeString = erl_types:t_to_string(erl_types:t_fun(FTA,FTR)),
-      {MFA, (PrevRank+fun_rank(RTS, {FTR, FTA})), 
+      {(PrevRank+fun_rank(RTS, {FTR, FTA})), MFA,
        [{type_string, TypeString}|Extra]}
   end.
 

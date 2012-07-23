@@ -41,10 +41,14 @@ q(Req, From, Len) when From > 0, Len > 0 ->
 
 do_q(F) ->
   Wrks = hs_search_worker_sup:all_workers(),
-  lists:merge(lists:map(
+  ResL = lists:map(
       fun(W) ->
           {ok, R} = try_in_pool(W, F), R
-      end, Wrks)).
+      end, Wrks),
+  Cmp = fun(X, Y) -> X >= Y end,
+  lists:foldl(fun(L1, L2) ->
+        lists:merge(Cmp, L1, L2)
+    end, [], ResL).
 
 reload() ->
   lists:foreach(
