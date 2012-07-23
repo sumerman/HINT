@@ -17,9 +17,7 @@
 
 q(Request) ->
   {ok, Pid} = supervisor:start_child(hint_query_sup, []),
-  Result = gen_server:call(Pid, {q, Request}, infinity),
-  supervisor:terminate_child(hint_query_sup, Pid),
-  Result.
+  gen_server:call(Pid, {q, Request}, infinity).
 
 start_link() ->
   gen_server:start_link(?MODULE, [], []).

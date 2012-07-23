@@ -23,16 +23,14 @@ stop() ->
         end
     end, Wrks).
 
--spec q(hint_search_req:req()) ->
-  {ok, [hs_stage:entry()]}.
+-spec q(hint_search_req:req()) -> [hs_stage:entry()].
 q(Req) ->
   F = fun(Wrk) ->
       hs_search_worker:q(Wrk, Req)
   end,
   do_q(F).
 
--spec q(hint_search_req:req(), pos_integer(), pos_integer()) ->
-  {ok, [hs_stage:entry()]}.
+-spec q(hint_search_req:req(), pos_integer(), pos_integer()) -> [hs_stage:entry()].
 q(Req, From, Len) when From > 0, Len > 0 ->
   F = fun(Wrk) ->
       hs_search_worker:q(Wrk, Req, From, Len)

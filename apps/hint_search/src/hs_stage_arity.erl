@@ -31,8 +31,8 @@ prepare(_Opts, _PLT, Req) ->
 %%
 %% Tests
 %%
--include_lib("eunit/include/eunit.hrl").
 -ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
 
 mfa_from_req(Req, Bias) ->
   M = hint_search_req:module(Req),

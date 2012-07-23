@@ -6,26 +6,34 @@
 defult_tab_ext() -> ".tab".
 
 tab_dir(App) when is_atom(App) ->
-  code:priv_dir(App);
-tab_dir(Path) -> Path.
+  case code:priv_dir(App) of
+    {error, _} = E -> E;
+    Path           -> {ok, Path}
+  end;
+tab_dir(Path) -> {ok, Path}.
 
+-spec tabs_in_src(atom() | file:filename()) -> [file:filename()].
+tabs_in_src(S) ->
+  {ok, Dir}   = tab_dir(S),
+  {ok, Files} = file:list_dir(Dir), 
+  [filename:join(Dir, F) 
+   || F <- Files, 
+      filename:extension(F) == defult_tab_ext()].
+
+-spec tab_paths([atom() | file:filename()]) -> [file:filename()].
 tab_paths(Srcs) ->
-  FilesInTabDirs = lists:concat(lists:map(
-        fun(S) ->
-            Dir = tab_dir(S),
-            {ok, Files} = file:list_dir(Dir), 
-            [filename:join(Dir, F) || F <- Files]
-        end, Srcs)),
-  [FName || FName <- FilesInTabDirs, 
-            filename:extension(FName) == defult_tab_ext()].
+  lists:concat(lists:map(fun tabs_in_src/1, Srcs)).
 
 tabs_to_plt() ->
   {ok, App} = application:get_application(),
   tabs_to_plt([App]).
 
+-spec tabs_to_plt([atom() | file:filename()]) -> dialyzer_plt:plt().
 tabs_to_plt(Srcs) ->
-  dialyzer_plt:merge_plts([tab_to_plt(T) || T <- tab_paths(Srcs)]).
+  AllPlts = lists:map(fun tab_to_plt/1, tab_paths(Srcs)),
+  dialyzer_plt:merge_plts(AllPlts).
 
+-spec tab_to_plt(file:filename()) -> dialyzer_plt:plt().
 tab_to_plt(Path) ->
   MFAs = parse_tab(Path),
   NPLT = dialyzer_plt:new(),

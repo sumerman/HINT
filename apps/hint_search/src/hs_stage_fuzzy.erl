@@ -12,7 +12,7 @@
 -export_type([state/0]).
 
 -record(state, {
-    rex :: re:me()
+    rex :: re:mp()
     }).
 
 -opaque state() :: #state{}.
