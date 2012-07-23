@@ -82,8 +82,8 @@ workers_number() ->
       case erlang:system_info(logical_processors_online) of
         unknown -> 
           case erlang:system_info(logical_processors) of
-            unknown -> 1;
-            LP      -> LP
+            LP when is_integer(LP), LP > 1 -> LP; % dialyzer bug?
+            _Unknown -> 1
           end;
         LPO     -> LPO
       end;

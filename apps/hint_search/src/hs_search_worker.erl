@@ -27,10 +27,11 @@
 -type stage_desc() :: {module(), proplists:proplist(), term()}.
 -record(state, {
     stages  = [] :: [stage_desc()],
-    plt_src = dialyzer_plt:get_default_plt()
-              :: file:filename()
-               | {module(), atom(), list()},
-    plt     = undefined :: dialyzer_plt:plt()
+    plt_src = dialyzer_plt:get_default_plt() 
+              :: file:filename() 
+              | {priv, file:filename()} 
+              | {module(), atom(), list()},
+    plt     = undefined :: dialyzer_plt:plt() | undefined
     }).
 
 %% ------------------------------------------------------------------
@@ -117,6 +118,7 @@ code_change(_OldVsn, State, _Extra) ->
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
 
+-spec uniform_stages([atom() | tuple(2) | tuple(3)]) -> [stage_desc()].
 uniform_stages(Stages) ->
   UF = fun
     ({S, O})             -> {S, O, undefined};
@@ -203,8 +205,8 @@ plt_path(Path) -> Path.
 %%
 %% Tests
 %%
--include_lib("eunit/include/eunit.hrl").
 -ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
 
 request() ->
   "foo:bar([A], fun((A)->B)) -> [B]".

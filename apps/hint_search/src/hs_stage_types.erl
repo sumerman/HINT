@@ -46,7 +46,7 @@ test_ranks(PLT, String) ->
   Modules = sets:to_list(dialyzer_plt:all_modules(PLT)),
   Fun = fun(Mod) ->
       {value, Sigs} = dialyzer_plt:lookup_module(PLT, Mod),
-      [?MODULE:apply(S, {MFA, 1, []}) ||
+      [?MODULE:apply(S, {1, MFA, []}) ||
         {{_,_,A}=MFA, _, _} <- Sigs,
         A =:= hint_search_req:arity(Req)]
   end,
@@ -157,7 +157,7 @@ temp_mod_name() ->
 temp_file() ->
   Ext = ".erl",
   Dir = mochitemp:mkdtemp(),
-  filename:join(Dir, [temp_mod_name(), Ext]).
+  filename:join(Dir, temp_mod_name() ++ Ext).
 
 rm_temp_file(File) ->
   mochitemp:rmtempdir(filename:dirname(File)).
