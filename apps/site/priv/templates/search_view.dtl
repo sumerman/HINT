@@ -1,3 +1,11 @@
-<div class="result">
-{{data}}
-</div>
+{% for w,m,f,a,e in data %}
+   <div class="row-fluid">
+        <div class="span1">
+             <small>{{w|floatformat:2}}</small>
+        </div>
+        <div class="span11">
+             <a href="http://erlang.org/doc/man/{{m}}.html#{{f}}-{{a}}">{{m}}:{{f}}/{{a}}</a>
+             <pre>{{e}}</pre>
+        </div>
+   </div>
+{% endfor %}
