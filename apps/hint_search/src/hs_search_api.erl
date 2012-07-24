@@ -9,7 +9,7 @@
          stop/0,
          reload/0,
          q/1,
-         q/3]).
+         q/2]).
 
 start_link() ->
   hs_search_worker_sup:start_link().
@@ -23,19 +23,18 @@ stop() ->
         end
     end, Wrks).
 
--spec q(hint_search_req:req()) -> [hs_stage:entry()].
+-spec q(hint_search_req:req()) -> {ok, [hs_stage:entry()]}.
 q(Req) ->
-  F = fun(Wrk) ->
-      hs_search_worker:q(Wrk, Req)
-  end,
-  do_q(F).
+  q(Req, undefined).
 
--spec q(hint_search_req:req(), pos_integer(), pos_integer()) -> [hs_stage:entry()].
-q(Req, From, Len) when From > 0, Len > 0 ->
+-spec q(hint_search_req:req(), number()|undefined) -> {ok, [hs_stage:entry()]}.
+q(Req, Threshold) 
+    when is_number(Threshold); 
+    Threshold == undefined ->
   F = fun(Wrk) ->
-      hs_search_worker:q(Wrk, Req, From, Len)
+      hs_search_worker:q(Wrk, Req, Threshold)
   end,
-  do_q(F).
+  {ok, do_q(F)}.
 
 do_q(F) ->
   Wrks = hs_search_worker_sup:all_workers(),

@@ -15,7 +15,7 @@
          stop/1,
          reload/1,
          q/2,
-         q/4]).
+         q/3]).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Exports
@@ -53,18 +53,13 @@ stop(Wrk) ->
 q(Wrk, Req) ->
   q(Wrk, Req, undefined).
 
-%% @private
 -spec q(pid()|atom(), hint_search_req:req(), 
-        {pos_integer(), pos_integer()} | undefined) ->
+        number() | undefined) ->
   {ok, [hs_stage:entry()]}.
-q(Wrk, Req, Range) ->
-  gen_server:call(Wrk, {q, Req, Range}).
-
--spec q(pid()|atom(), hint_search_req:req(), 
-        pos_integer(), pos_integer()) ->
-  {ok, [hs_stage:entry()]}.
-q(Wrk, Req, From, Len) when From > 0, Len > 0 ->
-  q(Wrk, Req, {From, Len}).
+q(Wrk, Req, Threshold) 
+    when is_number(Threshold); 
+    Threshold == undefined ->
+  gen_server:call(Wrk, {q, Req, Threshold}).
 
 reload(Wrk) ->
   Wrk ! load_plt.
@@ -90,10 +85,10 @@ init(Args) ->
 handle_call(stop, _From, State) ->
   {stop, normal, ok, State};
 
-handle_call({q, Req, Range}, _From, State) ->
+handle_call({q, Req, Threshold}, _From, State) ->
   StateTemp = prepare_for_req(State, Req),
   R = process(StateTemp),
-  {reply, {ok, cut(R, Range)}, State}.
+  {reply, {ok, cut(R, Threshold)}, State}.
 
 handle_cast(_Msg, State) ->
   {noreply, State}.
@@ -190,8 +185,8 @@ prepare_stage({Mod, Opt, _OldState}, PLT, Req) ->
   end.
 
 cut(L, undefined) -> L;
-cut(L, {From, Len}) ->
-  lists:sublist(L, From, Len).
+cut(L, Threshold) ->
+  lists:takewhile(fun({W,_,_})-> W >= Threshold end, L).
 
 plt_path({priv, Path}) ->
   case application:get_application() of
@@ -233,9 +228,9 @@ get_first(_, []) -> [];
 get_first(N, [E | List]) ->
   [E | get_first(N-1, List)].
 
-do_search(Wrk, Range) ->
+do_search(Wrk, Threshold) ->
   Req = hint_search_req:new(request()),
-  {ok, Res} = q(Wrk, Req, Range),
+  {ok, Res} = q(Wrk, Req, Threshold),
   ?debugFmt("~nTop results: ~p~n", [get_first(5, Res)]),
   Res.
 
@@ -250,12 +245,13 @@ is_valid_search_reuslt([{_Score, MFA, _Ex} | Rest])
 is_valid_search_reuslt(_) -> false.
 
 smth_found_and_well_formated(Wrk) ->
-  Len = 5, Start = 3,
+  Thres   = 0.2,
   Unbound = do_search(Wrk, undefined),
-  Bound   = do_search(Wrk, {Start, Len}),
+  Bound   = do_search(Wrk, Thres),
+  CheckTh = fun({W,_,_}) -> W >= Thres end,
   [?_assert(is_valid_search_reuslt(Unbound)),
    ?_assert(is_valid_search_reuslt(Bound)),
-   ?_assertEqual(length(Bound), Len),
+   ?_assert(lists:all(CheckTh, Bound)),
    ?_assert(is_sublist(Bound, Unbound))].
 
 is_sublist([X|_]=Sub, List) ->
