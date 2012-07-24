@@ -18,7 +18,7 @@ handle(Req, State) ->
     {'POST', _} ->
       process_post(Req, State);
     {'GET', _} ->
-      reply(301, "~[,,_,,]:3", Req, State)
+      reply(301, "~[,,_,,]:", Req, State)
   end.
 
 terminate(_R, _S) ->
@@ -54,16 +54,16 @@ reply(Status, Data, Req, State) ->
 
 render(error) ->
   {ok, Rendered} =
-    search_view:render([{data,["Error occured. ",
+    simple_view:render([{data,["Error occured. ",
                                     "Try rephrasing your search<br />"]}]),
   Rendered;
 render(empty) ->
   {ok, Rendered} =
-    search_view:render([{data,["No data matching your criteria. ",
+    simple_view:render([{data,["No data matching your criteria. ",
                                     "Try rephrasing your search<br />"]}]),
   Rendered;
 render(Data) ->
-  D = [{ W, M, F, A
+  D = [{ W*1.0, M, F, A
        , function_type(E)} || {W, {M, F, A}, E} <- Data],
   {ok, Rendered} = search_view:render([{data, D}]),
   Rendered.
