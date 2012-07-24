@@ -41,7 +41,7 @@ process_search(Q)                     ->
   case hint_search:q(Q) of
     {error, _Reason} -> render(error);
     {ok, Data} ->
-      Data1 = lists:sublist(Data, 10),
+      Data1 = lists:sublist(Data, 30),
       render(Data1)
   end.
 
@@ -63,25 +63,13 @@ render(empty) ->
                                     "Try rephrasing your search<br />"]}]),
   Rendered;
 render(Data) ->
-  D = [to_href(M) || M <- Data],
+  D = [{ W, M, F, A
+       , function_type(E)} || {W, {M, F, A}, E} <- Data],
   {ok, Rendered} = search_view:render([{data, D}]),
   Rendered.
 
 %%
 %% Misc. helpers
 %%
-to_href({MFA, Weight}) ->
-  FunctionName = function_name(MFA),
-  W = io_lib:format("~.1f",[Weight]),
-  lists:append([ "<a href=\"http://erlang.org/doc/man/"
-               , function_name_link(MFA), "\">", FunctionName
-               , "</a>&nbsp;<small>Weight: ", W, "</small><br />"]).
-
-%% M:F/A
-function_name({M, F, A}) ->
-  lists:flatten(lists:append([ atom_to_list(M), ":", atom_to_list(F)
-                             , "/", integer_to_list(A)])).
-%% M.html#F-A
-function_name_link({M, F, A}) ->
-  lists:flatten(lists:append([atom_to_list(M), ".html#", atom_to_list(F)
-                             , "-", integer_to_list(A)])).
+function_type(Extra) ->
+  proplists:get_value(type_string, Extra, "").

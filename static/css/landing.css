@@ -1,32 +1,38 @@
-
 .landing {
-	min-height: 100%;
+  min-height: 100%;
 }
 .landing h1,h2 {
-	font-family: 'MYRIADPROBOLDCOND', 'Helvetica', 'Arial';
+  font-family: 'MYRIADPROBOLDCOND', 'Helvetica', 'Arial';
 }
 .landing h1.hidden-desktop,h2.hidden-desktop {
-	font-size: 50px;
+  font-size: 50px;
 }
 .landing h1.visible-desktop {
-	font-size: 100px;
+  font-size: 100px;
 }
 .landing h2.visible-desktop {
-	font-size: 80px;
+  font-size: 80px;
 }
 .landing.language-bar {
-	font-size: 50px;
-	font-family: 'MYRIADPROBOLDCOND', 'Helvetica', 'Arial';
+  font-size: 50px;
+  font-family: 'MYRIADPROBOLDCOND', 'Helvetica', 'Arial';
 }
 .landing.language-bar ul {
-	list-style: none outside none;
+  list-style: none outside none;
 }
 .landing.language-bar li {
-	padding-top: 20px;
+  padding-top: 20px;
 }
 
 
 small {
-	font-size: small;
-	color: gray;
+  font-size: small;
+  color: gray;
+}
+
+pre {
+  border: none;
+  font-size: small;
+  margin: 2px 0 10px 0;
+  padding: 0;
 }
