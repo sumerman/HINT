@@ -1,4 +1,4 @@
-{% extends "base.dtl" %}
+{% extends "base_view.dtl" %}
 
 {# {% block header %}
 {% endblock %}
@@ -26,6 +26,9 @@
 			<a href="https://github.com/manpages/HINT/">{% t link="sweater_repo" %}</a><br />
 			<a href="https://github.com/nekrograve/HINT/">{% t link="nekro_repo" %}</a>
 		</div>
+    <div class="well">
+      <script src="https://gist.github.com/3171932.js?file=CHANGELOG"></script>
+    </div>
 	</div>
 	<div class="span5">
 		<div class="landing language-bar pull-right">
