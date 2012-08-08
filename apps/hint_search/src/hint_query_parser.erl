@@ -125,6 +125,7 @@ sanitize_guards(S) ->
 sanitize_return(S) ->
   S.
 
+%% since
 -spec parse_arity(string()) -> integer().
 parse_arity(S) ->
   S.
@@ -271,7 +272,6 @@ balance_pbb([], [_|_]=Pbb, Acc0) ->
 %% we skip unbalanced closing pbbs
 balance_pbb([C|T], Pbb0, Acc0) when ?is_pbb(C) ->
   {Acc, Pbb} = maybe_unwind_pbb(Pbb0, C),
-  io:format("C:~p~nAcc0: ~p~nPbb0~p~nAcc: ~p~nPbb~p~n~n", [lists:flatten([C]), lists:flatten(Acc0), lists:flatten(Pbb0), lists:flatten(Acc), lists:flatten(Pbb)]),
   balance_pbb(T, Pbb, [Acc | Acc0]);
 %% anything else just goes in
 balance_pbb([H|T], Pbb, Acc) ->
