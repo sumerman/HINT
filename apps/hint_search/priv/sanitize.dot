@@ -1,0 +1,115 @@
+digraph g {
+#  graph [
+#    rankdir = "LR"
+#  ]
+
+  node [
+       fontsize = "16"
+  ];
+
+  "start";
+  "start" -> "1";
+
+  "alpha"   [ label = "alpha a-zA-Z"  ]
+  "alpha 2" [ label = "alpha a-zA-Z"  ]
+  "close"   [ label = "close )]}"     ]
+  "open"    [ label = "open ([{"      ]
+  "_"       [ label = "underscore _"  ]
+  "_ 2"     [ label = "underscore _"  ]
+  ","       [ label = "comma ,"       ]
+  "num"     [ label = "num 0-9"       ]
+  ":"       [ label = "colon :"       ]
+  "::"      [ label = "colon :"       ]
+  "[]"      [ label = "empty []"      ]
+  "[] 2"    [ label = "empty []"      ]
+  "|"       [ label = "alternative |" ]
+  "insert"  [ label = "insert _"      ]
+
+  "1" [
+      shape = "rectangle"
+      label = <1<br/>alpha<br/>underscore<br/>open>
+   ];
+
+   "1" -> "open";
+   "1" -> "_";
+   "1" -> "alpha";
+     "open" -> "2";
+
+  "2" [
+    shape = "rectangle"
+    label = <2<br/>alpha<br/>open<br/>close<br/>underscore>
+  ]
+
+  "2" -> "alpha";
+  "2" -> "open";
+  "2" -> "close";
+  "2" -> "_";
+     "alpha" -> "3";
+      "close" -> "4"
+     "_" -> "3";
+
+  "3" [
+    shape = "rectangle"
+    label = <3<br/>alpha<br/>num<br/>underscore<br/>colon<br/>close<br/>open<br/>comma<br/>alternative>
+  ]
+
+  "3" -> "alpha"
+  "3" -> "num"
+  "3" -> "_"
+  "3" -> ":"
+  "3" -> "close"
+  "3" -> "open"
+  "3" -> ","
+  "3" -> "|"
+    "num" -> "3"
+    ":" -> "5"
+    "|" -> "1"
+
+  "4" [
+    shape = "rectangle"
+    label = <4<br/>comma<br/>close>
+  ]
+
+  "4" -> "close"
+  "4" -> ","
+    "," -> "1"
+
+  "5" [
+    shape = "rectangle"
+    label = <5<br/>colon<br/>alpha<br/>underscore>
+  ]
+
+  "5" -> "_"
+  "5" -> "alpha"
+  "5" -> "::"
+    "::" -> "6"
+
+  "6" [
+    shape = "rectangle"
+    label = <6<br/>alpha<br/>underscore>
+  ]
+
+  "6" -> "alpha 2"
+  "6" -> "_ 2"
+      "alpha 2" -> "7"
+      "_ 2" -> "7"
+
+  "7" [
+    shape = "rectangle"
+    label = <7<br/>alpha<br/>num<br/>under<br/>close<br/>comma<br/>alt<br/>>
+  ]
+
+  "7" -> "alpha"
+  "7" -> "num"
+  "7" -> "_"
+  "7" -> "close"
+  "7" -> "|"
+
+  "1" -> "[]" -> "exit";
+  "3" -> "[]";
+  "4" -> "[]";
+  "5" -> "[] 2" -> "insert" -> "exit";
+  "6" -> "[] 2"
+  "7" -> "[];"
+  "exit"
+ }
