@@ -21,6 +21,7 @@
 		<div class="well">
 			<h2>{% t title="HINT overview" %}</h2>
 			{% t text="HINT overview" %}<br />
+			<a href="https://github.com/erlanger-ru/HINT">{% t link="main_repo" %}</a><br />
 			<a href="https://github.com/Spawnfest2012/HINT">{% t link="sf_repo" %}</a><br />
 			<a href="https://github.com/dmitriid/HINT/">{% t link="dima_repo" %}</a><br />
 			<a href="https://github.com/manpages/HINT/">{% t link="sweater_repo" %}</a><br />

@@ -11,7 +11,7 @@
     {env, [
         {base_stages, [hs_stage_fuzzy, hs_stage_arity, hs_stage_types]},
         {workers, [
-            {default, [{plt_src, {priv, "tiny_plt"}}]},
+            {default, []},
             {bifs,    [{plt_src, {hs_biftab_plt, tabs_to_plt, []}}]}
           ]}
       ]}

@@ -46,6 +46,15 @@ t([{link,<<"sf_repo">>}]) ->
 		_ -> <<"*sf_repo*">>
 	end;
 
+t([{link,<<"main_repo">>}]) -> 
+	case saloon_ctx:language() of 
+		en -> <<"Main repository">>;
+		ru -> <<"sf_repo">>;
+		lv -> <<"sf_repo">>;
+		es -> <<"sf_repo">>;
+		_ -> <<"*sf_repo*">>
+	end;
+
 t([{title,<<"Your results will be here">>}]) -> 
 	case saloon_ctx:language() of 
 		en -> <<"Your results will be here">>;
